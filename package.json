@@ -1,0 +1,25 @@
+{
+  "name": "papo-app",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/api",
+    "apps/web",
+    "packages/contracts"
+  ],
+  "scripts": {
+    "test": "npm run test -w @photobooth/api",
+    "typecheck": "npm run typecheck -w @photobooth/api",
+    "dev": "npm run dev:local -w @photobooth/api",
+    "build": "npm run build -w @photobooth/web && npm run build -w @photobooth/api",
+    "smoke": "npm run smoke:local -w @photobooth/api",
+    "test:web": "node scripts/smoke-admin-ui.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "npm@11.9.0"
+}

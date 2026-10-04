@@ -1,0 +1,35 @@
+{
+  "name": "@photobooth/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "contract": "node scripts/generate-contract.mjs",
+    "predev": "npm run contract",
+    "dev": "wrangler dev",
+    "predev:local": "npm run contract",
+    "dev:local": "node --import tsx dev/local-server.ts",
+    "presmoke:local": "npm run contract",
+    "smoke:local": "node dev/smoke-local.mjs",
+    "migrate": "node scripts/migrate.mjs",
+    "bootstrap": "node scripts/bootstrap.mjs",
+    "prebuild": "npm run contract",
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "pretypecheck": "npm run contract",
+    "typecheck": "tsc --noEmit",
+    "pretest": "npm run contract",
+    "test": "node --import tsx --test test/*.test.ts",
+    "admin:reset": "node scripts/reset-admin.mjs"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.1.0",
+    "bcryptjs": "3.0.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260927.1",
+    "@electric-sql/pglite": "0.5.8",
+    "@types/node": "26.6.3",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "wrangler": "4.141.0"
+  }
+}

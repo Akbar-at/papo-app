@@ -1,0 +1,2 @@
+DATABASE_URL=replace-with-dedicated-application-database-url
+TOKEN_SIGNING_KEY=replace-with-at-least-32-random-characters

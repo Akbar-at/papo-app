@@ -1,0 +1,504 @@
+openapi: 3.1.0
+info:
+  title: PAPO application API
+  version: 0.2.0-draft
+  description: Booth and superadmin backend contract. First rollout uses online, single-use, full-bypass vouchers. Event tokens are reserved for a later mode; paid authorization awaits gateway selection. No session may be authorized offline.
+servers:
+  - url: /
+security:
+  - deviceBearer: []
+paths:
+  /v1/auth/login:
+    post:
+      security: []
+      parameters: [{ $ref: '#/components/parameters/AdminOrigin' }]
+      summary: Sign in with an application-managed email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email, maxLength: 254 }
+                password: { type: string, maxLength: 72, description: At most 72 UTF-8 bytes }
+      responses:
+        '200': { description: "User ID, email and role; sets an HttpOnly session cookie valid for 12 hours" }
+        '401': { description: "Incorrect credentials or inactive account" }
+        '403': { description: "Request origin rejected" }
+        '429': { description: "Ten attempts per email and 100 per client IP per 15 minutes; Retry-After is 900 seconds" }
+  /v1/auth/me:
+    get:
+      security: [{ adminSession: [] }]
+      summary: Read the signed-in user
+      responses:
+        '200': { description: "User ID, email and role" }
+        '401': { description: "Missing, expired or revoked session" }
+  /v1/auth/logout:
+    post:
+      parameters: [{ $ref: '#/components/parameters/AdminOrigin' }]
+      security: [{ adminSession: [] }]
+      summary: Revoke this session and clear its cookie
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: "Session revoked; safe to repeat" }
+        '403': { description: "Request origin rejected" }
+  /v1/auth/password:
+    post:
+      parameters: [{ $ref: '#/components/parameters/AdminOrigin' }]
+      security: [{ adminSession: [] }]
+      summary: Change password and revoke all account sessions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password: { type: string, maxLength: 72 }
+                new_password: { type: string, minLength: 12, maxLength: 72, description: At most 72 UTF-8 bytes }
+      responses:
+        '200': { description: "Password changed; all sessions revoked; sign in again" }
+        '400': { description: "Wrong current password or invalid new password" }
+        '401': { description: "Missing or revoked session" }
+        '429': { description: "Too many current-password attempts" }
+  /v1/admin/workspace:
+    get:
+      security: [{ adminSession: [] }]
+      summary: Read businesses, sites, booths, frames, latest configurations and recent vouchers
+      description: Superadmins manage all businesses. Returns the most recent 100 vouchers; never returns password hashes, device credentials or voucher codes.
+      responses:
+        '200': { description: "tenants, sites, booths, frames, configurations and vouchers arrays" }
+        '401': { description: "Missing or revoked session" }
+        '403': { description: "Superadmin role required" }
+  /docs:
+    get:
+      security: []
+      summary: Swagger UI for this contract
+      responses:
+        '200': { description: "Swagger HTML page" }
+  /openapi.yaml:
+    get:
+      security: []
+      summary: Raw OpenAPI YAML contract
+      responses:
+        '200': { description: "OpenAPI YAML document" }
+  /v1/admin/identity:
+    get:
+      security: [{ adminSession: [] }]
+      summary: Return the signed-in admin identity and role
+      description: Requires an application session and an active admin account.
+      responses:
+        '200': { description: "Admin ID, email, role and app_session auth method" }
+        '401': { description: "Application session missing, expired or revoked" }
+  /v1/admin/booths:
+    post:
+      parameters: [{ $ref: '#/components/parameters/AdminOrigin' }]
+      security: [{ adminSession: [] }]
+      summary: Enroll a voucher-mode booth and return its device credential
+      description: Requires an application session and an active superadmin record. Every admin mutation requires an exact same-origin Origin header and application/json. Reusing request_id with identical input returns the same credential; store it on the booth and never log it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [request_id, tenant_id, site_id, name]
+              properties:
+                request_id: { type: string, format: uuid }
+                tenant_id: { type: string, format: uuid }
+                site_id: { type: string, format: uuid }
+                name: { type: string, minLength: 1, maxLength: 100 }
+      responses:
+        '201': { description: "Booth ID, device_credential and session_mode" }
+        '403': { description: "No active superadmin mapping" }
+        '409': { description: "Request ID reused with different input" }
+  /v1/admin/frames:
+    post:
+      parameters: [{ $ref: '#/components/parameters/AdminOrigin' }]
+      security: [{ adminSession: [] }]
+      summary: Publish immutable frame manifest metadata
+      description: manifest_sha256 is SHA-256 of UTF-8 JSON with object keys sorted recursively and arrays in original order. Frame binary asset publication and Windows asset validation remain integration work.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [request_id, tenant_id, name, manifest]
+              properties:
+                request_id: { type: string, format: uuid }
+                tenant_id: { type: string, format: uuid }
+                name: { type: string, minLength: 1, maxLength: 100 }
+                manifest: { type: object, additionalProperties: true }
+      responses:
+        '201': { description: "Frame version ID and manifest SHA-256" }
+        '403': { description: "No active superadmin mapping" }
+        '409': { description: "Request ID reused with different input" }
+  /v1/admin/booths/{booth_id}/configurations:
+    parameters:
+      - name: booth_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      parameters: [{ $ref: '#/components/parameters/AdminOrigin' }]
+      security: [{ adminSession: [] }]
+      summary: Publish a complete immutable booth settings version
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [request_id, frame_version_ids, price_idr, first_photo_timer_seconds, remaining_photo_timer_seconds, retake_limit, camera_settings]
+              properties:
+                request_id: { type: string, format: uuid }
+                frame_version_ids: { type: array, minItems: 1, maxItems: 20, uniqueItems: true, items: { type: string, format: uuid } }
+                price_idr: { type: integer, minimum: 0, maximum: 100000000 }
+                first_photo_timer_seconds: { type: integer, minimum: 0, maximum: 60 }
+                remaining_photo_timer_seconds: { type: integer, minimum: 0, maximum: 60 }
+                retake_limit: { type: integer, minimum: 0, maximum: 8 }
+                camera_settings: { type: object, additionalProperties: true }
+      responses:
+        '201': { description: "Booth ID, desired_version and published_at" }
+        '403': { description: "No active superadmin mapping" }
+        '409': { description: "Invalid tenant frames or conflicting request ID" }
+  /v1/admin/vouchers:
+    post:
+      parameters: [{ $ref: '#/components/parameters/AdminOrigin' }]
+      security: [{ adminSession: [] }]
+      summary: Issue one single-use full-bypass voucher
+      description: booth_id can be omitted for any booth in the tenant. Code is returned on issue and exact retry; store and transmit it securely.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [request_id, tenant_id, expires_at]
+              properties:
+                request_id: { type: string, format: uuid }
+                tenant_id: { type: string, format: uuid }
+                booth_id: { type: string, format: uuid }
+                expires_at: { type: string, format: date-time, description: Must be in the future and within one year }
+      responses:
+        '201': { description: "Voucher ID, plaintext code, scope and expiry" }
+        '403': { description: "No active superadmin mapping" }
+        '409': { description: "Request ID reused with different input" }
+  /v1/device/configuration:
+    get:
+      summary: Fetch the complete desired booth configuration and assigned frame versions
+      description: Windows validates frame assets and camera settings before applying the version atomically.
+      responses:
+        '200':
+          description: Versioned settings and frame manifests
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BoothConfiguration' }
+        '409': { description: "No configuration has been published" }
+  /v1/device/overview:
+    get:
+      summary: Read this device's booth status and latest 30 sessions
+      description: Returns configuration versions, session progress, upload and print state, and unexpired private gallery links. Scoped to the authenticated booth. It does not report live camera, printer, or heartbeat health.
+      responses:
+        '200': { description: "Booth status and recent sessions" }
+        '401': { description: "Device credential invalid or revoked" }
+  /v1/device/config-applied:
+    post:
+      summary: Acknowledge or reject a configuration version with a stable event ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_id, version, status]
+              properties:
+                event_id: { type: string, format: uuid }
+                version: { type: integer, minimum: 1 }
+                status: { type: string, enum: [applied, rejected] }
+                reason: { type: string, maxLength: 512, description: Required when rejected }
+      responses:
+        '200': { description: "Acknowledgment recorded idempotently" }
+        '409': { description: "Unknown version or conflicting event ID" }
+  /healthz:
+    get:
+      security: []
+      responses:
+        '200': { description: "API process is responding" }
+  /v1/device/frames:
+    get:
+      summary: Get assigned immutable frame versions and current booth config version
+      responses:
+        '200':
+          description: Frame versions available to this booth
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [config_version, frames]
+                properties:
+                  config_version: { type: integer }
+                  frames:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, manifest, manifest_sha256]
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string }
+                        manifest: { type: object, additionalProperties: true }
+                        manifest_sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+  /v1/device/sessions:
+    post:
+      summary: Create or recover a booth session using a stable local UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [client_session_id, authorization]
+              properties:
+                client_session_id: { type: string, format: uuid }
+                authorization:
+                  type: object
+                  required: [kind]
+                  properties:
+                    kind: { type: string, enum: [event, voucher, payment], description: Voucher is the first rollout mode. Event requires separately configured server tokens; payment currently returns 503. }
+                    code: { type: string, description: Required for voucher; never log or persist as plaintext }
+      responses:
+        '201':
+          description: Existing or new event/voucher session, consuming at most one event token or voucher; server connection is required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionCreated' }
+        '503': { $ref: '#/components/responses/PaidUnavailable' }
+  /v1/device/sessions/{session_id}:
+    parameters:
+      - $ref: '#/components/parameters/SessionId'
+    get:
+      summary: Recover server session state after booth restart
+      responses:
+        '200': { description: "Scoped session status" }
+  /v1/device/sessions/{session_id}/authorization:
+    parameters:
+      - $ref: '#/components/parameters/SessionId'
+    get:
+      summary: Poll server capture authorization
+      responses:
+        '200': { description: "Server authorization state; capture_authorized must be true before camera action" }
+  /v1/device/sessions/{session_id}/frame:
+    parameters:
+      - $ref: '#/components/parameters/SessionId'
+    put:
+      summary: Select one assigned immutable frame after authorization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [frame_version_id]
+              properties:
+                frame_version_id: { type: string, format: uuid }
+      responses:
+        '200': { description: "Same selection can be retried; different selection returns 409" }
+  /v1/device/sessions/{session_id}/capture:
+    parameters:
+      - $ref: '#/components/parameters/SessionId'
+    post:
+      summary: Report local capture/composition finished
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_id, photo_count]
+              properties:
+                event_id: { type: string, format: uuid }
+                photo_count: { type: integer, minimum: 1, maximum: 8 }
+      responses:
+        '200': { description: "Capture recorded idempotently" }
+  /v1/device/sessions/{session_id}/media-uploads:
+    parameters:
+      - $ref: '#/components/parameters/SessionId'
+    post:
+      summary: Create or renew one upload slot for composite JPEG or GIF
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MediaIntent' }
+      responses:
+        '200':
+          description: Upload target; token expires after ten minutes and may be renewed by repeating this request
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [upload_id, method, upload_url, expires_at, uploaded]
+                properties:
+                  upload_id: { type: string, format: uuid }
+                  method: { const: PUT }
+                  upload_url: { type: string, format: uri }
+                  expires_at: { type: string, format: date-time }
+                  uploaded: { type: boolean }
+  /v1/media-uploads/{upload_token}:
+    parameters:
+      - name: upload_token
+        in: path
+        required: true
+        schema: { type: string, pattern: '^[0-9a-f]{64}$' }
+    put:
+      security: []
+      summary: Upload exact bytes to a private R2 object through the Worker
+      description: This scoped URL is a bearer secret. Retry with identical bytes. The Worker checks size and SHA-256 before storing.
+      requestBody:
+        required: true
+        content:
+          image/jpeg: { schema: { type: string, format: binary } }
+          image/gif: { schema: { type: string, format: binary } }
+      responses:
+        '204': { description: "Upload stored or already stored" }
+        '410': { description: "Upload intent expired; request another intent" }
+        '422': { description: "Size or checksum mismatch" }
+  /v1/device/sessions/{session_id}/prints:
+    parameters:
+      - $ref: '#/components/parameters/SessionId'
+    post:
+      summary: Append a local spooler status event; printing can proceed while delivery is pending
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_id, client_job_id, status, occurred_at]
+              properties:
+                event_id: { type: string, format: uuid }
+                client_job_id: { type: string, format: uuid }
+                status: { type: string, enum: [submitted, confirmed, failed, uncertain] }
+                spooler_job_id: { type: [string, 'null'] }
+                occurred_at: { type: string, format: date-time }
+      responses:
+        '201': { description: "Print event accepted idempotently" }
+  /v1/device/sessions/{session_id}/finalize:
+    parameters:
+      - $ref: '#/components/parameters/SessionId'
+    post:
+      summary: Issue stable private share link after both uploads and confirmed print
+      description: The link and private media expire 30 days after finalization. An expired link cannot be renewed.
+      responses:
+        '200':
+          description: Share URL and expiration
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [session_id, status, share_url, share_expires_at]
+                properties:
+                  session_id: { type: string, format: uuid }
+                  status: { const: ready }
+                  share_url: { type: string, format: uri }
+                  share_expires_at: { type: string, format: date-time }
+        '409': { description: "Upload or confirmed print is pending" }
+  /g/{share_token}:
+    parameters:
+      - $ref: '#/components/parameters/ShareToken'
+    get:
+      security: []
+      summary: Private session gallery metadata
+      responses:
+        '200': { description: "Media links for this session only" }
+        '404': { description: "Missing, expired or revoked link" }
+  /g/{share_token}/media/{kind}:
+    parameters:
+      - $ref: '#/components/parameters/ShareToken'
+      - name: kind
+        in: path
+        required: true
+        schema: { type: string, enum: [composite, gif] }
+    get:
+      security: []
+      summary: Stream one private media object
+      responses:
+        '200': { description: "JPEG or GIF bytes" }
+        '404': { description: "Missing, expired or revoked link" }
+components:
+  securitySchemes:
+    deviceBearer: { type: http, scheme: bearer }
+    adminSession:
+      type: apiKey
+      in: cookie
+      name: __Host-papo_session
+      description: HttpOnly Secure host-only application session. Sign in through /v1/auth/login. Local loopback development uses papo_local_session instead.
+  parameters:
+    AdminOrigin:
+      name: Origin
+      in: header
+      required: true
+      schema: { type: string }
+      description: Must exactly equal the application request origin. Browsers supply this on JSON POSTs.
+    SessionId:
+      name: session_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ShareToken:
+      name: share_token
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[0-9a-f]{64}$' }
+  schemas:
+    BoothConfiguration:
+      type: object
+      required: [desired_version, applied_version, session_mode, price_idr, first_photo_timer_seconds, remaining_photo_timer_seconds, retake_limit, camera_settings, frames]
+      properties:
+        desired_version: { type: integer }
+        applied_version: { type: integer }
+        session_mode: { type: string, enum: [disabled, voucher, event, paid] }
+        price_idr: { type: integer, minimum: 0 }
+        first_photo_timer_seconds: { type: integer, minimum: 0, maximum: 60 }
+        remaining_photo_timer_seconds: { type: integer, minimum: 0, maximum: 60 }
+        retake_limit: { type: integer, minimum: 0, maximum: 8 }
+        camera_settings: { type: object, additionalProperties: true, description: Adapter-specific settings; Windows rejects unsupported keys }
+        frames:
+          type: array
+          items:
+            type: object
+            required: [id, name, manifest, manifest_sha256]
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+              manifest: { type: object, additionalProperties: true }
+              manifest_sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+    SessionCreated:
+      type: object
+      required: [session_id, client_session_id, status, mode, price_idr, config_version, capture_authorized]
+      properties:
+        session_id: { type: string, format: uuid }
+        client_session_id: { type: string, format: uuid }
+        status: { type: string, enum: [authorized, captured, ready, cancelled] }
+        mode: { type: string, enum: [event, voucher, paid] }
+        price_idr: { type: integer }
+        config_version: { type: integer }
+        capture_authorized: { type: boolean }
+    MediaIntent:
+      type: object
+      required: [kind, content_type, byte_size, sha256]
+      properties:
+        kind: { type: string, enum: [composite, gif] }
+        content_type: { type: string, enum: [image/jpeg, image/gif] }
+        byte_size: { type: integer, minimum: 1, maximum: 20000000 }
+        sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+  responses:
+    PaidUnavailable:
+      description: Paid gateway not configured; booth must not start capture

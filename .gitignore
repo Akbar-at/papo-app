@@ -1,0 +1,66 @@
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+*credentials*.json
+*secrets*.json
+
+# Load-test identities and results
+admin-tokens.txt
+booth-ids.txt
+booth-tokens.txt
+results/
+**/results/
+samples.csv
+summary.json
+
+# Synthetic and captured media
+uploads/
+media/
+*.jpg
+*.jpeg
+*.webp
+*.heic
+*.mp4
+!references/**/*.jpg
+!references/**/*.jpeg
+!references/**/*.png
+
+# Python
+.tools/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# JavaScript and Cloudflare tooling
+node_modules/
+dist/
+.local/
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# Local databases and generated artifacts
+*.db
+*.sqlite
+*.sqlite3
+coverage/
+presentations/*.tmp
+presentations/~$*
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
