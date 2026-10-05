@@ -1,0 +1,855 @@
+{
+  "info": {
+    "name": "PAPO application API",
+    "_postman_id": "cf859dac-b755-4099-aad5-02cbdb1ad299",
+    "description": "PAPO admin, device, media and gallery API. See postman/README.md for setup and the voucher-to-gallery workflow. Based on packages/contracts/openapi.yaml and the local API adapter.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8787",
+      "type": "string"
+    },
+    {
+      "key": "adminEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminPassword",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "newAdminPassword",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tenantId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "siteId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "boothId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "frameVersionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "desiredVersion",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "deviceCredential",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "voucherCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "uploadUrl",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "shareToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "mediaByteSize",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "mediaSha256",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "System and contract",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/healthz",
+            "description": "API process health."
+          },
+          "response": []
+        },
+        {
+          "name": "OpenAPI contract",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/openapi.yaml",
+            "description": "Raw OpenAPI YAML."
+          },
+          "response": []
+        },
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/docs",
+            "description": "Interactive contract documentation."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{baseUrl}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/auth/login",
+            "description": "Admin email/password login. Postman stores the HttpOnly session cookie in its cookie jar.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Current user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/auth/me",
+            "description": "Requires the admin session cookie."
+          },
+          "response": []
+        },
+        {
+          "name": "Change password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{baseUrl}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/auth/password",
+            "description": "Revokes every account session, including the current one. Sign in again afterward.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"{{adminPassword}}\",\n  \"new_password\": \"{{newAdminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{baseUrl}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/auth/logout",
+            "description": "Revokes the current session and clears its cookie.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Identity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/admin/identity",
+            "description": "Read the current superadmin identity."
+          },
+          "response": []
+        },
+        {
+          "name": "Workspace",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/admin/workspace",
+            "description": "Lists businesses, sites, booths, frames, configurations and recent vouchers. Copy the desired tenant/site IDs into variables."
+          },
+          "response": []
+        },
+        {
+          "name": "Enroll booth",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{baseUrl}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/admin/booths",
+            "description": "Creates a voucher-mode booth. Save device_credential locally; it is returned only at issue or exact idempotent retry.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"{{enrollBoothRequestId}}\",\n  \"tenant_id\": \"{{tenantId}}\",\n  \"site_id\": \"{{siteId}}\",\n  \"name\": \"Postman booth\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('enrollBoothRequestId')) {",
+                  "  pm.collectionVariables.set('enrollBoothRequestId', pm.variables.replaceIn('{{$guid}}'));",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.booth_id) pm.collectionVariables.set('boothId', data.booth_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish frame",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{baseUrl}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/admin/frames",
+            "description": "Creates immutable frame manifest metadata. Actual artwork publication is not yet implemented.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"{{publishFrameRequestId}}\",\n  \"tenant_id\": \"{{tenantId}}\",\n  \"name\": \"Postman frame\",\n  \"manifest\": {\n    \"layout\": \"postman-demo\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('publishFrameRequestId')) {",
+                  "  pm.collectionVariables.set('publishFrameRequestId', pm.variables.replaceIn('{{$guid}}'));",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.frame_version_id) pm.collectionVariables.set('frameVersionId', data.frame_version_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish configuration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{baseUrl}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/admin/booths/{{boothId}}/configurations",
+            "description": "Publishes complete immutable booth settings with assigned frame IDs.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"{{publishConfigurationRequestId}}\",\n  \"frame_version_ids\": [\n    \"{{frameVersionId}}\"\n  ],\n  \"price_idr\": 0,\n  \"first_photo_timer_seconds\": 3,\n  \"remaining_photo_timer_seconds\": 3,\n  \"retake_limit\": 1,\n  \"camera_settings\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('publishConfigurationRequestId')) {",
+                  "  pm.collectionVariables.set('publishConfigurationRequestId', pm.variables.replaceIn('{{$guid}}'));",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.desired_version) pm.collectionVariables.set('desiredVersion', data.desired_version);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Issue voucher",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{baseUrl}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/admin/vouchers",
+            "description": "Issues one online single-use voucher scoped to the business. Add booth_id to the body for booth-specific scope. Copy the returned code into voucherCode locally.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"{{issueVoucherRequestId}}\",\n  \"tenant_id\": \"{{tenantId}}\",\n  \"expires_at\": \"{{voucherExpiresAt}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('issueVoucherRequestId')) {",
+                  "  pm.collectionVariables.set('issueVoucherRequestId', pm.variables.replaceIn('{{$guid}}'));",
+                  "}",
+                  "if (!pm.collectionVariables.get('voucherExpiresAt')) {",
+                  "  pm.collectionVariables.set('voucherExpiresAt', new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString());",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Device",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{deviceCredential}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/device/overview",
+            "description": "Booth status and recent sessions."
+          },
+          "response": []
+        },
+        {
+          "name": "Configuration",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/device/configuration",
+            "description": "Desired and applied settings plus assigned frame manifests."
+          },
+          "response": []
+        },
+        {
+          "name": "Frames",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/device/frames",
+            "description": "Assigned frame versions."
+          },
+          "response": []
+        },
+        {
+          "name": "Configuration applied",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/device/config-applied",
+            "description": "Acknowledge a version after the booth has validated and applied it. Use status rejected with a reason if validation fails.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_id\": \"{{configurationAppliedEventId}}\",\n  \"version\": {{desiredVersion}},\n  \"status\": \"applied\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('configurationAppliedEventId')) {",
+                  "  pm.collectionVariables.set('configurationAppliedEventId', pm.variables.replaceIn('{{$guid}}'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create voucher session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/device/sessions",
+            "description": "Redeems a single-use voucher online. Reuse the same client_session_id for an idempotent retry.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_session_id\": \"{{clientSessionId}}\",\n  \"authorization\": {\n    \"kind\": \"voucher\",\n    \"code\": \"{{voucherCode}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('clientSessionId')) {",
+                  "  pm.collectionVariables.set('clientSessionId', pm.variables.replaceIn('{{$guid}}'));",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.session_id) pm.collectionVariables.set('sessionId', data.session_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get session",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/device/sessions/{{sessionId}}",
+            "description": "Recover the scoped session state."
+          },
+          "response": []
+        },
+        {
+          "name": "Check authorization",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/device/sessions/{{sessionId}}/authorization",
+            "description": "Capture only when capture_authorized is true."
+          },
+          "response": []
+        },
+        {
+          "name": "Select frame",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/device/sessions/{{sessionId}}/frame",
+            "description": "Select an assigned immutable frame after authorization.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"frame_version_id\": \"{{frameVersionId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Report capture",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/device/sessions/{{sessionId}}/capture",
+            "description": "Report completed local capture/composition.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_id\": \"{{captureEventId}}\",\n  \"photo_count\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('captureEventId')) {",
+                  "  pm.collectionVariables.set('captureEventId', pm.variables.replaceIn('{{$guid}}'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create composite upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/device/sessions/{{sessionId}}/media-uploads",
+            "description": "Set mediaByteSize and mediaSha256 for the exact JPEG. Copy upload_url locally to uploadUrl, then use Upload media.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kind\": \"composite\",\n  \"content_type\": \"image/jpeg\",\n  \"byte_size\": {{mediaByteSize}},\n  \"sha256\": \"{{mediaSha256}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create GIF upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/device/sessions/{{sessionId}}/media-uploads",
+            "description": "Set mediaByteSize and mediaSha256 for the exact GIF. Copy upload_url locally to uploadUrl, then use Upload media with image/gif.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kind\": \"gif\",\n  \"content_type\": \"image/gif\",\n  \"byte_size\": {{mediaByteSize}},\n  \"sha256\": \"{{mediaSha256}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Report print",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/device/sessions/{{sessionId}}/prints",
+            "description": "Report spooler status. Confirmed is required before finalization.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_id\": \"{{printEventId}}\",\n  \"client_job_id\": \"{{printClientJobId}}\",\n  \"status\": \"confirmed\",\n  \"occurred_at\": \"{{printOccurredAt}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('printEventId')) {",
+                  "  pm.collectionVariables.set('printEventId', pm.variables.replaceIn('{{$guid}}'));",
+                  "}",
+                  "if (!pm.collectionVariables.get('printClientJobId')) {",
+                  "  pm.collectionVariables.set('printClientJobId', pm.variables.replaceIn('{{$guid}}'));",
+                  "}",
+                  "if (!pm.collectionVariables.get('printOccurredAt')) {",
+                  "  pm.collectionVariables.set('printOccurredAt', new Date().toISOString());",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Finalize",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/v1/device/sessions/{{sessionId}}/finalize",
+            "description": "Requires both media uploads and confirmed print. Copy the token from share_url into shareToken locally."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Media and gallery",
+      "item": [
+        {
+          "name": "Upload media",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "image/jpeg"
+              }
+            ],
+            "url": "{{uploadUrl}}",
+            "description": "Replace the URL with {{uploadUrl}}, select the exact binary file and set Content-Type to image/jpeg or image/gif. No device bearer token is required; the upload URL is a scoped secret.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "file",
+              "file": {
+                "src": ""
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Gallery metadata",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/g/{{shareToken}}",
+            "description": "Private session gallery metadata. Token comes from finalize share_url."
+          },
+          "response": []
+        },
+        {
+          "name": "Composite JPEG",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/g/{{shareToken}}/media/composite",
+            "description": "Streams the private composite JPEG."
+          },
+          "response": []
+        },
+        {
+          "name": "GIF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/g/{{shareToken}}/media/gif",
+            "description": "Streams the private GIF."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Local development only",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{deviceCredential}}",
+            "type": "string"
+          }
+        ]
+      },
+      "description": "Available only from the local Node adapter, not the deployed Worker.",
+      "item": [
+        {
+          "name": "Issue local test voucher",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/v1/device/local-test-voucher",
+            "description": "Local-only helper that issues a voucher for this authenticated booth. Copy code into voucherCode locally."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
